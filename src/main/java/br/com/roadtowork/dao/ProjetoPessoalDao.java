@@ -13,6 +13,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @ApplicationScoped
@@ -25,18 +26,20 @@ public class ProjetoPessoalDao {
         try (Connection conexao = dataSource.getConnection()) {
 
             PreparedStatement stmt = conexao.prepareStatement(
-                    "INSERT INTO T_PROJETO_PESSOAL (" +
-                            "id_projeto, id_usuario, dt_periodo, ds_titulo, ds_descricao, st_concluido, dt_conclusao" +
-                            ") VALUES (sq_t_projeto_pessoal.nextval, ?, ?, ?, ?, ?, ?)",
-                    new String[]{"id_projeto"}
+                    "INSERT INTO T_PROJETO_PESSOAL " +
+                            "(ID_PROJETO, ID_USUARIO, DT_CRIACAO, DS_TITULO, DS_DESCRICAO, ST_CONCLUIDO, DT_CONCLUSAO) " +
+                            "VALUES (SQ_T_PROJETO_PESSOAL.NEXTVAL, ?, ?, ?, ?, ?, ?)",
+                    new String[]{"ID_PROJETO"}
             );
 
             stmt.setInt(1, projeto.getUsuario().getId());
-            stmt.setObject(2, projeto.getPeriodo());
+            stmt.setDate(2, java.sql.Date.valueOf(projeto.getDataCriacao())); // DT_CRIACAO
             stmt.setString(3, projeto.getTitulo());
             stmt.setString(4, projeto.getDescricao());
-            stmt.setInt(5, projeto.isConcluido() ? 1 : 0); // boolean → número
-            stmt.setObject(6, projeto.getConclusao());
+            stmt.setInt(5, projeto.isConcluido() ? 1 : 0);
+            stmt.setDate(6, projeto.getDataConclusao() != null
+                    ? java.sql.Date.valueOf(projeto.getDataConclusao())
+                    : null);
 
             stmt.executeUpdate();
 
@@ -47,13 +50,14 @@ public class ProjetoPessoalDao {
         }
     }
 
-    public List<ProjetoPessoal> listar() throws SQLException {
+    public List<ProjetoPessoal> listarPorUsuario(int idUsuario) throws SQLException {
         try (Connection conexao = dataSource.getConnection()) {
 
             PreparedStatement stmt = conexao.prepareStatement(
-                    "SELECT id_projeto, id_usuario, dt_periodo, ds_titulo, ds_descricao, st_concluido, dt_conclusao " +
-                            "FROM T_PROJETO_PESSOAL"
+                    "SELECT * FROM T_PROJETO_PESSOAL WHERE ID_USUARIO = ? ORDER BY DT_CRIACAO DESC"
             );
+
+            stmt.setInt(1, idUsuario);
 
             ResultSet rs = stmt.executeQuery();
             List<ProjetoPessoal> lista = new ArrayList<>();
@@ -61,82 +65,87 @@ public class ProjetoPessoalDao {
             while (rs.next()) {
                 lista.add(parseProjeto(rs));
             }
-
             return lista;
         }
     }
 
-    public ProjetoPessoal buscar(int id)
-            throws SQLException, EntidadeNaoEncontradaException {
-
+    public ProjetoPessoal buscar(int id) throws SQLException, EntidadeNaoEncontradaException {
         try (Connection conexao = dataSource.getConnection()) {
 
             PreparedStatement stmt = conexao.prepareStatement(
-                    "SELECT id_projeto, id_usuario, dt_periodo, ds_titulo, ds_descricao, st_concluido, dt_conclusao " +
-                            "FROM T_PROJETO_PESSOAL WHERE id_projeto = ?"
+                    "SELECT * FROM T_PROJETO_PESSOAL WHERE ID_PROJETO = ?"
             );
+
             stmt.setInt(1, id);
 
             ResultSet rs = stmt.executeQuery();
             if (!rs.next()) {
-                throw new EntidadeNaoEncontradaException("Projeto pessoal não encontrado");
+                throw new EntidadeNaoEncontradaException("Projeto não encontrado");
             }
 
             return parseProjeto(rs);
         }
     }
 
-    public void atualizarStatus(ProjetoPessoal projeto)
-            throws SQLException, EntidadeNaoEncontradaException {
-
-        try (Connection conexao = dataSource.getConnection()) {
-
-            PreparedStatement stmt = conexao.prepareStatement(
-                    "UPDATE T_PROJETO_PESSOAL SET st_concluido = ?, dt_conclusao = ? WHERE id_projeto = ?"
-            );
-
-            stmt.setInt(1, projeto.isConcluido() ? 1 : 0);
-            stmt.setObject(2, projeto.getConclusao());
-            stmt.setInt(3, projeto.getId());
-
-            if (stmt.executeUpdate() == 0) {
-                throw new EntidadeNaoEncontradaException("Projeto pessoal não existe para ser atualizado");
-            }
-        }
-    }
-
     public void atualizar(ProjetoPessoal projeto) throws SQLException, EntidadeNaoEncontradaException {
         try (Connection conexao = dataSource.getConnection()) {
+
             PreparedStatement stmt = conexao.prepareStatement(
-                    "UPDATE t_projeto_pessoal " +
-                            "SET dt_periodo = ?, ds_titulo = ?, ds_descricao = ? " +
-                            "WHERE id_projeto = ?"
+                    "UPDATE T_PROJETO_PESSOAL SET " +
+                            "DS_TITULO = ?, DS_DESCRICAO = ?, ST_CONCLUIDO = ?, DT_CONCLUSAO = ? " +
+                            "WHERE ID_PROJETO = ?"
             );
 
-            stmt.setObject(1, projeto.getPeriodo()); // LocalDate mapeia para DATE
-            stmt.setString(2, projeto.getTitulo());
-            stmt.setString(3, projeto.getDescricao());
-            stmt.setInt(4, projeto.getId());
+            stmt.setString(1, projeto.getTitulo());
+            stmt.setString(2, projeto.getDescricao());
+            stmt.setInt(3, projeto.isConcluido() ? 1 : 0);
 
-            int linhasAfetadas = stmt.executeUpdate();
-            if (linhasAfetadas == 0) {
-                throw new EntidadeNaoEncontradaException("Projeto não encontrado para atualizar");
+            if (projeto.getDataConclusao() != null) {
+                stmt.setDate(4, java.sql.Date.valueOf(projeto.getDataConclusao()));
+            } else {
+                stmt.setNull(4, java.sql.Types.DATE);
+            }
+
+            stmt.setInt(5, projeto.getId());
+
+            if (stmt.executeUpdate() == 0) {
+                throw new EntidadeNaoEncontradaException("Projeto não existe para ser atualizado");
             }
         }
     }
 
-    public void apagar(int id) throws SQLException, EntidadeNaoEncontradaException {
+        public void apagar(int id) throws SQLException, EntidadeNaoEncontradaException {
         try (Connection conexao = dataSource.getConnection()) {
+
             PreparedStatement stmt = conexao.prepareStatement(
-                    "DELETE FROM t_projeto_pessoal WHERE id_projeto = ?"
+                    "DELETE FROM T_PROJETO_PESSOAL WHERE ID_PROJETO = ?"
             );
 
             stmt.setInt(1, id);
-            int linhasAfetadas = stmt.executeUpdate();
 
-            if (linhasAfetadas == 0) {
-                throw new EntidadeNaoEncontradaException("Projeto não encontrado para apagar");
+            if (stmt.executeUpdate() == 0) {
+                throw new EntidadeNaoEncontradaException("Projeto não existe para ser removido");
             }
+        }
+    }
+
+    public int contarConcluidos(int usuarioId) throws SQLException {
+        try (Connection conexao = dataSource.getConnection()) {
+
+            PreparedStatement stmt = conexao.prepareStatement(
+                    "SELECT COUNT(*) FROM T_PROJETO_PESSOAL " +
+                            "WHERE ID_USUARIO = ? AND ST_CONCLUIDO = 1"
+            );
+
+            stmt.setInt(1, usuarioId);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+
+            return 0;
         }
     }
 
@@ -144,23 +153,27 @@ public class ProjetoPessoalDao {
 
         int id = rs.getInt("id_projeto");
         int idUsuario = rs.getInt("id_usuario");
-        LocalDate periodo = rs.getObject("dt_periodo", LocalDate.class);
+
         String titulo = rs.getString("ds_titulo");
         String descricao = rs.getString("ds_descricao");
-        boolean concluido = rs.getInt("st_concluido") == 1;
+
+        LocalDate dtCriacao = rs.getObject("dt_criacao", LocalDate.class); // CORRETO
         LocalDate dtConclusao = rs.getObject("dt_conclusao", LocalDate.class);
+
+        boolean concluido = rs.getInt("st_concluido") == 1;
 
         Usuario usuario = new Usuario();
         usuario.setId(idUsuario);
 
-        return new ProjetoPessoal(
-                id,
-                periodo,
-                titulo,
-                descricao,
-                concluido,
-                dtConclusao,
-                usuario
-        );
+        ProjetoPessoal projeto = new ProjetoPessoal();
+        projeto.setId(id);
+        projeto.setTitulo(titulo);
+        projeto.setDescricao(descricao);
+        projeto.setDataCriacao(dtCriacao);
+        projeto.setDataConclusao(dtConclusao);
+        projeto.setConcluido(concluido);
+        projeto.setUsuario(usuario);
+
+        return projeto;
     }
 }

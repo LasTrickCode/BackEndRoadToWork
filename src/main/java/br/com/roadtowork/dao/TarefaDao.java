@@ -60,6 +60,21 @@ public class TarefaDao {
         }
     }
 
+    public List<Tarefa> listarConcluidas(int usuarioId) throws SQLException {
+        try (Connection conexao = dataSource.getConnection()) {
+            PreparedStatement stmt = conexao.prepareStatement(
+                    "SELECT * FROM T_TAREFA WHERE ID_USUARIO = ? AND ST_CONCLUIDA = 1"
+            );
+            stmt.setInt(1, usuarioId);
+            ResultSet rs = stmt.executeQuery();
+            List<Tarefa> lista = new ArrayList<>();
+            while (rs.next()) {
+                lista.add(parseTarefa(rs));
+            }
+            return lista;
+        }
+    }
+
     public Tarefa buscar(int id) throws SQLException, EntidadeNaoEncontradaException {
         try (Connection conexao = dataSource.getConnection()) {
 
@@ -109,20 +124,17 @@ public class TarefaDao {
         }
     }
 
-    public void marcarComoConcluida(int id) throws SQLException, EntidadeNaoEncontradaException {
+    public int contarConcluidas(int usuarioId) throws SQLException {
         try (Connection conexao = dataSource.getConnection()) {
-
             PreparedStatement stmt = conexao.prepareStatement(
-                    "UPDATE T_TAREFA SET ST_CONCLUIDA = 1 WHERE ID_TAREFA = ?"
+                    "SELECT COUNT(*) FROM T_TAREFA WHERE ID_USUARIO = ? AND ST_CONCLUIDA = 1"
             );
-
-            stmt.setInt(1, id);
-            if (stmt.executeUpdate() == 0) {
-                throw new EntidadeNaoEncontradaException("Tarefa não encontrada para marcar como concluída");
+            stmt.setInt(1, usuarioId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
             }
-
-            // OBS: Aqui você pode chamar o Service para registrar histórico
-            // e atualizar a meta mensal, não faça no DAO.
+            return 0;
         }
     }
 

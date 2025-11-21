@@ -5,79 +5,47 @@ import java.time.LocalDate;
 public class ProjetoPessoal {
 
     private int id;
-    private LocalDate periodo;
     private String titulo;
     private String descricao;
+    private LocalDate dataCriacao;
+    private LocalDate dataConclusao;
     private boolean concluido;
-    private LocalDate conclusao;
     private Usuario usuario;
 
     public ProjetoPessoal() {
+        this.dataCriacao = LocalDate.now();
+        this.concluido = false;
     }
 
-    public ProjetoPessoal(int id, LocalDate periodo, String titulo, String descricao, boolean concluido, LocalDate conclusao, Usuario usuario) {
+    public ProjetoPessoal(int id, String titulo, String descricao, LocalDate dataCriacao,
+                          LocalDate dataConclusao, boolean concluido, Usuario usuario) {
         this.id = id;
-        this.periodo = periodo;
         this.titulo = titulo;
         this.descricao = descricao;
+        this.dataCriacao = dataCriacao;
+        this.dataConclusao = dataConclusao;
         this.concluido = concluido;
-        this.conclusao = conclusao;
         this.usuario = usuario;
     }
 
-    public int getId() {
-        return id;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public String getTitulo() { return titulo; }
+    public void setTitulo(String titulo) { this.titulo = titulo; }
 
-    public LocalDate getPeriodo() {
-        return periodo;
-    }
+    public String getDescricao() { return descricao; }
+    public void setDescricao(String descricao) { this.descricao = descricao; }
 
-    public void setPeriodo(LocalDate periodo) {
-        this.periodo = periodo;
-    }
+    public LocalDate getDataCriacao() { return dataCriacao; }
+    public void setDataCriacao(LocalDate dataCriacao) { this.dataCriacao = dataCriacao; }
 
-    public String getTitulo() {
-        return titulo;
-    }
+    public LocalDate getDataConclusao() { return dataConclusao; }
+    public void setDataConclusao(LocalDate dataConclusao) { this.dataConclusao = dataConclusao; }
 
-    public void setTitulo(String titulo) {
-        this.titulo = titulo;
-    }
+    public boolean isConcluido() { return concluido; }
+    public void setConcluido(boolean concluido) { this.concluido = concluido; }
 
-    public String getDescricao() {
-        return descricao;
-    }
-
-    public void setDescricao(String descricao) {
-        this.descricao = descricao;
-    }
-
-    public boolean isConcluido() {
-        return concluido;
-    }
-
-    public void setConcluido(boolean concluido) {
-        this.concluido = concluido;
-    }
-
-    public LocalDate getConclusao() {
-        return conclusao;
-    }
-
-    public void setConclusao(LocalDate conclusao) {
-        this.conclusao = conclusao;
-    }
-
-    public Usuario getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(Usuario usuario) {
-        this.usuario = usuario;
-    }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
 }

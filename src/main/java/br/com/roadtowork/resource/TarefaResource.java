@@ -1,5 +1,6 @@
 package br.com.roadtowork.resource;
 
+import br.com.roadtowork.dao.MetaDao;
 import br.com.roadtowork.dao.TarefaDao;
 import br.com.roadtowork.dao.UsuarioDao;
 import br.com.roadtowork.dto.tarefa.AtualizarStatusConcluidoTarefaDto;
@@ -36,6 +37,9 @@ public class TarefaResource {
     @Inject
     private UsuarioDao usuarioDao;
 
+    @Inject
+    private MetaDao metaDao;
+
     @GET
     public List<DetalhesTarefaDto> listarPorUsuario(@QueryParam("usuarioId") int usuarioId) throws SQLException {
         return tarefaDao.listarPorUsuario(usuarioId).stream()
@@ -49,6 +53,14 @@ public class TarefaResource {
         Tarefa tarefa = tarefaDao.buscar(id);
         DetalhesTarefaDto dto = modelMapper.map(tarefa, DetalhesTarefaDto.class);
         return Response.ok(dto).build();
+    }
+
+    @GET
+    @Path("/concluidas")
+    public List<DetalhesTarefaDto> listarConcluidas(@QueryParam("usuarioId") int usuarioId) throws SQLException {
+        return tarefaDao.listarConcluidas(usuarioId).stream()
+                .map(t -> modelMapper.map(t, DetalhesTarefaDto.class))
+                .toList();
     }
 
     @POST
@@ -69,10 +81,17 @@ public class TarefaResource {
 
     @PUT
     @Path("/{id}/concluir")
-    public Response atualizarStatusTarefa(@PathParam("id") int id, @Valid AtualizarStatusConcluidoTarefaDto dto) throws EntidadeNaoEncontradaException, SQLException {
+    public Response atualizarStatusTarefa(@PathParam("id") int id, @Valid AtualizarStatusConcluidoTarefaDto dto) throws SQLException, EntidadeNaoEncontradaException {
         Tarefa tarefa = tarefaDao.buscar(id);
+
+        boolean mudouParaConcluida = !tarefa.isConcluido() && dto.getConcluido();
         tarefa.setConcluido(dto.getConcluido());
         tarefaDao.atualizar(tarefa);
+
+        // Se foi marcada como concluída agora, incrementa a meta
+        if (mudouParaConcluida) {
+            metaDao.incrementar(tarefa.getUsuario().getId());
+        }
 
         return Response.ok(modelMapper.map(tarefa, DetalhesTarefaDto.class)).build();
     }

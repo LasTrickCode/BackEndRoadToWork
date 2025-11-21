@@ -1,11 +1,13 @@
 package br.com.roadtowork.resource;
 
 
+import br.com.roadtowork.dao.MetaDao;
 import br.com.roadtowork.dao.UsuarioDao;
 import br.com.roadtowork.dto.usuario.AtualizarUsuarioDto;
 import br.com.roadtowork.dto.usuario.CadastroUsuarioDto;
 import br.com.roadtowork.dto.usuario.DetalhesUsuarioDto;
 import br.com.roadtowork.exception.EntidadeNaoEncontradaException;
+import br.com.roadtowork.model.Meta;
 import br.com.roadtowork.model.Usuario;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -18,6 +20,7 @@ import org.modelmapper.ModelMapper;
 
 import java.net.URI;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
 
 @Path("/usuarios")
@@ -30,6 +33,9 @@ public class UsuarioResource {
 
     @Inject
     private UsuarioDao usuarioDao;
+
+    @Inject
+    private MetaDao metaDao;
 
     @GET
     @Path("/{id}")
@@ -49,13 +55,24 @@ public class UsuarioResource {
     @POST
     public Response create(@Valid CadastroUsuarioDto dto, @Context UriInfo uriInfo) throws SQLException {
         Usuario usuario = modelMapper.map(dto, Usuario.class);
-
         usuarioDao.cadastrar(usuario);
 
-        URI uri = uriInfo.getAbsolutePathBuilder()
-                .path(String.valueOf(usuario.getId())).build();
+        Meta meta = new Meta();
+        meta.setUsuario(usuario);
+        meta.setMetaTotal(40);
+        meta.setAtual(0);
+        meta.setConcluida(false);
+        meta.setDataCriacao(LocalDate.now());
 
-        return Response.created(uri).entity(modelMapper.map(usuario, DetalhesUsuarioDto.class)).build(); //HTTP STATUS CODE 201 (Created)
+        metaDao.cadastrar(meta); // insere no banco
+
+        URI uri = uriInfo.getAbsolutePathBuilder()
+                .path(String.valueOf(usuario.getId()))
+                .build();
+
+        return Response.created(uri)
+                .entity(modelMapper.map(usuario, DetalhesUsuarioDto.class))
+                .build(); // HTTP 201 Created
     }
 
     @PUT
